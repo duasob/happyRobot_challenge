@@ -1,0 +1,16 @@
+# Environment variables
+.env
+
+# SSL certificates
+certs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+

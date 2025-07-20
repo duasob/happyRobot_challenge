@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inbound Carriers Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0f0f;
+            color: #f0f0f0;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: #1a1a1a;
+            border-bottom: 1px solid #4a8a4a;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 600;
+            color: #f0f0f0;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 1rem;
+            color: #b0b0b0;
+            font-weight: 400;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .carriers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .carrier-window {
+            background: #1a1a1a;
+            border: 1px solid #4a8a4a;
+            border-radius: 8px;
+            padding: 25px;
+            transition: border-color 0.2s ease;
+        }
+
+        .carrier-window:hover {
+            border-color: #6aa06a;
+        }
+
+        .carrier-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #4a8a4a;
+        }
+
+        .load-id {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #6aa06a;
+        }
+
+        .status-badge {
+            background: #4a8a4a;
+            color: #d0f0d0;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-badge.pending {
+            background: #8a6a4a;
+            color: #f0e0d0;
+        }
+
+        .status-badge.calling {
+            background: #6a4a8a;
+            color: #e0d0f0;
+        }
+
+        .status-badge.ready {
+            background: #4a8a4a;
+            color: #d0f0d0;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-size: 0.8rem;
+            color: #a0a0a0;
+            font-weight: 500;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 1rem;
+            color: #f0f0f0;
+            font-weight: 400;
+            word-break: break-word;
+        }
+
+        .route-info {
+            grid-column: 1 / -1;
+            background: #151515;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #4a8a4a;
+            margin: 20px 0;
+        }
+
+        .route-arrow {
+            color: #6aa06a;
+            font-size: 1.1rem;
+            margin: 0 12px;
+        }
+
+        .metrics-row {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #4a8a4a;
+        }
+
+        .metric {
+            text-align: center;
+            flex: 1;
+        }
+
+        .metric-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #6aa06a;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: #a0a0a0;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            font-size: 1.1rem;
+            color: #b0b0b0;
+        }
+
+        .error {
+            text-align: center;
+            padding: 60px 20px;
+            color: #e08080;
+            font-size: 1.1rem;
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #4a8a4a;
+            border: 1px solid #6aa06a;
+            color: #f0f0f0;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #6aa06a;
+        }
+
+        .notes-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #151515;
+            border-radius: 6px;
+            border-left: 3px solid #6aa06a;
+        }
+
+        .notes-section .info-label {
+            margin-bottom: 8px;
+        }
+
+        .search-section {
+            background: #1a1a1a;
+            border: 1px solid #4a8a4a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            background: #151515;
+            border: 1px solid #4a8a4a;
+            border-radius: 4px;
+            color: #f0f0f0;
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #6aa06a;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            background: #4a8a4a;
+            border: 1px solid #6aa06a;
+            color: #f0f0f0;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        .action-btn:hover {
+            background: #6aa06a;
+        }
+
+        .action-btn.secondary {
+            background: #6a6a6a;
+            border-color: #8a8a8a;
+        }
+
+        .action-btn.secondary:hover {
+            background: #8a8a8a;
+        }
+
+        .status-update {
+            margin-top: 15px;
+            padding: 10px;
+            background: #151515;
+            border-radius: 4px;
+            border: 1px solid #4a8a4a;
+            font-size: 0.9rem;
+            color: #d0f0d0;
+        }
+
+        @media (max-width: 768px) {
+            .carriers-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .container {
+                padding: 20px 15px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Inbound Carriers Dashboard</h1>
+        <p>Real-time carrier information and load tracking</p>
+    </div>
+
+    <div class="container">
+        <div class="search-section">
+            <input type="text" id="searchInput" class="search-input"
+                placeholder="Search carriers by load ID, origin, destination, or equipment type...">
+            <div class="action-buttons">
+                <button class="action-btn" onclick="searchCarriers()">Search</button>
+                <button class="action-btn secondary" onclick="clearSearch()">Clear</button>
+            </div>
+        </div>
+
+        <div id="carriers-container" class="carriers-grid">
+            <div class="loading">Loading carrier information...</div>
+        </div>
+    </div>
+
+    <button class="refresh-btn" onclick="loadCarriers()">Refresh</button>
+
+    <script>
+        let allCarriers = [];
+        let filteredCarriers = [];
+
+        function loadCarriers() {
+            const container = document.getElementById('carriers-container');
+            container.innerHTML = '<div class="loading">Loading carrier information...</div>';
+
+            fetch('/carriers/api/carriers')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        container.innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                        return;
+                    }
+
+                    if (data.carriers.length === 0) {
+                        container.innerHTML = '<div class="loading">No carriers found</div>';
+                        return;
+                    }
+
+                    allCarriers = data.carriers;
+                    filteredCarriers = [...allCarriers];
+                    displayCarriers(filteredCarriers);
+                })
+                .catch(error => {
+                    container.innerHTML = `<div class="error">Error loading carriers: ${error.message}</div>`;
+                });
+        }
+
+        function displayCarriers(carriers) {
+            const container = document.getElementById('carriers-container');
+
+            if (carriers.length === 0) {
+                container.innerHTML = '<div class="loading">No carriers found</div>';
+                return;
+            }
+
+            container.innerHTML = carriers.map(carrier => `
+                <div class="carrier-window">
+                    <div class="carrier-header">
+                        <div class="load-id">Load #${carrier.load_id}</div>
+                        <div class="status-badge ${carrier.status || 'pending'}">${getStatusText(carrier.status || 'pending')}</div>
+                    </div>
+                    
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Equipment Type</div>
+                            <div class="info-value">${carrier.equipment_type || 'N/A'}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-label">Commodity</div>
+                            <div class="info-value">${carrier.commodity_type || 'N/A'}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-label">Weight</div>
+                            <div class="info-value">${carrier.weight ? `${carrier.weight} lbs` : 'N/A'}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-label">Pieces</div>
+                            <div class="info-value">${carrier.num_of_pieces || 'N/A'}</div>
+                        </div>
+                        
+                        <div class="route-info">
+                            <div style="text-align: center;">
+                                <span class="info-value">${carrier.origin || 'N/A'}</span>
+                                <span class="route-arrow">→</span>
+                                <span class="info-value">${carrier.destination || 'N/A'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-label">Pickup</div>
+                            <div class="info-value">${formatDateTime(carrier.pickup_datetime)}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-label">Delivery</div>
+                            <div class="info-value">${formatDateTime(carrier.delivery_datetime)}</div>
+                        </div>
+                        
+                        <div class="metrics-row">
+                            <div class="metric">
+                                <div class="metric-value">${carrier.miles || 'N/A'}</div>
+                                <div class="metric-label">Miles</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">$${carrier.loadboard_rate || 'N/A'}</div>
+                                <div class="metric-label">Rate</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">${carrier.dimensions || 'N/A'}</div>
+                                <div class="metric-label">Dimensions</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons" style="margin-top: 20px;">
+                        <button class="action-btn" onclick="triggerWorkflow('${carrier.load_id}')">Trigger Workflow</button>
+                        <button class="action-btn secondary" onclick="updateStatus('${carrier.load_id}', 'pending')">Set Pending</button>
+                        <button class="action-btn secondary" onclick="updateStatus('${carrier.load_id}', 'calling')">Set Calling</button>
+                        <button class="action-btn secondary" onclick="updateStatus('${carrier.load_id}', 'ready')">Set Ready</button>
+                    </div>
+                    
+                    ${carrier.notes ? `
+                        <div class="notes-section">
+                            <div class="info-label">Notes</div>
+                            <div class="info-value">${carrier.notes}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': 'Pending Carrier',
+                'calling': 'Calling Carrier',
+                'ready': 'Carrier Ready'
+            };
+            return statusMap[status] || 'Pending Carrier';
+        }
+
+        function searchCarriers() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            if (!searchTerm.trim()) {
+                filteredCarriers = [...allCarriers];
+            } else {
+                filteredCarriers = allCarriers.filter(carrier =>
+                    carrier.load_id.toLowerCase().includes(searchTerm) ||
+                    (carrier.origin && carrier.origin.toLowerCase().includes(searchTerm)) ||
+                    (carrier.destination && carrier.destination.toLowerCase().includes(searchTerm)) ||
+                    (carrier.equipment_type && carrier.equipment_type.toLowerCase().includes(searchTerm)) ||
+                    (carrier.commodity_type && carrier.commodity_type.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            displayCarriers(filteredCarriers);
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            filteredCarriers = [...allCarriers];
+            displayCarriers(filteredCarriers);
+        }
+
+        function triggerWorkflow(loadId) {
+            const carrier = allCarriers.find(c => c.load_id === loadId);
+            if (!carrier) {
+                alert('Carrier not found');
+                return;
+            }
+
+            const webhookData = {
+                load_id: carrier.load_id,
+                origin: carrier.origin,
+                destination: carrier.destination,
+                pickup_datetime: carrier.pickup_datetime,
+                delivery_datetime: carrier.delivery_datetime,
+                equipment_type: carrier.equipment_type,
+                loadboard_rate: carrier.loadboard_rate,
+                weight: carrier.weight,
+                commodity_type: carrier.commodity_type,
+                num_of_pieces: carrier.num_of_pieces,
+                miles: carrier.miles,
+                dimensions: carrier.dimensions,
+                notes: carrier.notes,
+                status: carrier.status || 'pending',
+                timestamp: new Date().toISOString()
+            };
+
+            fetch('https://workflows.platform.happyrobot.ai/hooks/59hhvrerzsr3', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(webhookData)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        showStatusUpdate(`Workflow triggered successfully for Load #${loadId}`);
+                    } else {
+                        showStatusUpdate(`Failed to trigger workflow for Load #${loadId}`);
+                    }
+                })
+                .catch(error => {
+                    showStatusUpdate(`Error triggering workflow: ${error.message}`);
+                });
+        }
+
+        function updateStatus(loadId, newStatus) {
+            const carrier = allCarriers.find(c => c.load_id === loadId);
+            if (!carrier) {
+                alert('Carrier not found');
+                return;
+            }
+
+            // Update the carrier status locally
+            carrier.status = newStatus;
+
+            // Update the display
+            displayCarriers(filteredCarriers);
+
+            // Send status update to webhook
+            const statusData = {
+                load_id: loadId,
+                status: newStatus,
+                status_text: getStatusText(newStatus),
+                timestamp: new Date().toISOString(),
+                carrier_info: carrier
+            };
+
+            fetch('https://workflows.platform.happyrobot.ai/hooks/59hhvrerzsr3', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(statusData)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        showStatusUpdate(`Status updated to ${getStatusText(newStatus)} for Load #${loadId}`);
+                    } else {
+                        showStatusUpdate(`Failed to update status for Load #${loadId}`);
+                    }
+                })
+                .catch(error => {
+                    showStatusUpdate(`Error updating status: ${error.message}`);
+                });
+        }
+
+        function showStatusUpdate(message) {
+            // Create a temporary status message
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'status-update';
+            statusDiv.textContent = message;
+            statusDiv.style.position = 'fixed';
+            statusDiv.style.top = '20px';
+            statusDiv.style.right = '20px';
+            statusDiv.style.zIndex = '1000';
+            statusDiv.style.maxWidth = '300px';
+
+            document.body.appendChild(statusDiv);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                if (statusDiv.parentNode) {
+                    statusDiv.parentNode.removeChild(statusDiv);
+                }
+            }, 3000);
+        }
+
+        function formatDateTime(dateTimeStr) {
+            if (!dateTimeStr) return 'N/A';
+            try {
+                const date = new Date(dateTimeStr);
+                return date.toLocaleString();
+            } catch {
+                return dateTimeStr;
+            }
+        }
+
+        // Load carriers on page load
+        document.addEventListener('DOMContentLoaded', loadCarriers);
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadCarriers, 30000);
+
+        // Search on Enter key
+        document.getElementById('searchInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                searchCarriers();
+            }
+        });
+    </script>
+</body>
+
+</html>
