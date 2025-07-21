@@ -100,38 +100,7 @@ class DatabaseManager:
                 'dimensions': '48x96x120',
                 'status': 'ready'
             },
-            {
-                'load_id': 'LOAD004',
-                'origin': 'Miami, FL',
-                'destination': 'Orlando, FL',
-                'pickup_datetime': '2024-01-15 09:00:00',
-                'delivery_datetime': '2024-01-15 15:30:00',
-                'equipment_type': 'Dry Van',
-                'loadboard_rate': 650.00,
-                'notes': 'General freight - standard handling',
-                'weight': 8000.0,
-                'commodity_type': 'General Merchandise',
-                'num_of_pieces': 200,
-                'miles': 235.0,
-                'dimensions': '48x48x96',
-                'status': 'pending'
-            },
-            {
-                'load_id': 'LOAD005',
-                'origin': 'Seattle, WA',
-                'destination': 'Portland, OR',
-                'pickup_datetime': '2024-01-15 07:30:00',
-                'delivery_datetime': '2024-01-15 11:00:00',
-                'equipment_type': 'Power Only',
-                'loadboard_rate': 450.00,
-                'notes': 'Trailer drop - customer will load',
-                'weight': 0.0,
-                'commodity_type': 'Trailer',
-                'num_of_pieces': 1,
-                'miles': 173.0,
-                'dimensions': '53x102x102',
-                'status': 'pending'
-            }
+            
         ]
         
         for data in sample_data:
