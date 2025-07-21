@@ -44,6 +44,7 @@ Create or paste your `.env` file at the source of the repo.
 
 Build and run with Docker:
 ```bash
+cd docker
 docker build -t happyrobot .
 docker run -p 5000:5000 happyrobot
 ```
@@ -54,22 +55,3 @@ docker run -p 5000:5000 happyrobot
 
 ## 🔑 Authentication
 - All API endpoints require an API key via the `X-API-KEY` header or `api_key` query parameter.
-
-## 📬 Example Webhook POST
-```bash
-curl -X POST https://happy-robot-challenge-jweajqeqa-brunos-projects-7e1456d0.vercel.app/webhook/ \
-  -H "Content-Type: application/json" \
-  -H "X-API-KEY: UBNfljhgZwVGTIIXMsgH27EQHz4WULkX29k3dnsN8r0" \
-  -d '{
-    "mc_num": "102743",
-    "chosen_id": "LOAD001",
-    "final_rate": "1875",
-    "initial_rate": "1800",
-    "transcript": "[ ... JSON ... ]",
-    "sentiment": "Positive",
-    "duration": "120"
-  }'
-```
-
----
-
