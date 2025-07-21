@@ -312,6 +312,7 @@
     <div class="header">
         <h1>Inbound Carriers Dashboard</h1>
         <p>Real-time carrier information and load tracking</p>
+        <a href="booked.html" style="color:#6aa06a;text-decoration:underline;font-size:1rem;">View Booked Loads →</a>
     </div>
 
     <div class="container">
@@ -334,25 +335,40 @@
     <script>
         let allCarriers = [];
         let filteredCarriers = [];
+        let API_KEY = null;
+
+        function fetchWithApiKey(url, options = {}) {
+            options.headers = options.headers || {};
+            options.headers['X-API-KEY'] = API_KEY;
+            return fetch(url, options);
+        }
+
+        function getApiKeyAndLoad() {
+            fetch('/api/public_config')
+                .then(res => res.json())
+                .then(cfg => {
+                    API_KEY = cfg.api_key;
+                    loadCarriers();
+                    setInterval(loadCarriers, 30000);
+                });
+        }
 
         function loadCarriers() {
             const container = document.getElementById('carriers-container');
             container.innerHTML = '<div class="loading">Loading carrier information...</div>';
 
-            fetch('/carriers/api/carriers')
+            fetchWithApiKey('/api/pending_loads')
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
                         container.innerHTML = `<div class="error">Error: ${data.error}</div>`;
                         return;
                     }
-
-                    if (data.carriers.length === 0) {
-                        container.innerHTML = '<div class="loading">No carriers found</div>';
+                    if (!data.pending_loads || data.pending_loads.length === 0) {
+                        container.innerHTML = '<div class="loading">No pending loads found</div>';
                         return;
                     }
-
-                    allCarriers = data.carriers;
+                    allCarriers = data.pending_loads;
                     filteredCarriers = [...allCarriers];
                     displayCarriers(filteredCarriers);
                 })
@@ -506,7 +522,7 @@
                 timestamp: new Date().toISOString()
             };
 
-            fetch('https://workflows.platform.happyrobot.ai/hooks/59hhvrerzsr3', {
+            fetchWithApiKey('https://workflows.platform.happyrobot.ai/hooks/59hhvrerzsr3', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -547,7 +563,7 @@
                 carrier_info: carrier
             };
 
-            fetch('https://workflows.platform.happyrobot.ai/hooks/59hhvrerzsr3', {
+            fetchWithApiKey('https://workflows.platform.happyrobot.ai/hooks/59hhvrerzsr3', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -598,10 +614,10 @@
         }
 
         // Load carriers on page load
-        document.addEventListener('DOMContentLoaded', loadCarriers);
+        document.addEventListener('DOMContentLoaded', getApiKeyAndLoad);
 
         // Auto-refresh every 30 seconds
-        setInterval(loadCarriers, 30000);
+        // setInterval(loadCarriers, 30000); // This line is now handled by getApiKeyAndLoad
 
         // Search on Enter key
         document.getElementById('searchInput').addEventListener('keypress', function (e) {

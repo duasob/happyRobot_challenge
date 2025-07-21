@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booked Loads Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0f0f;
+            color: #f0f0f0;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .header {
+            background: #1a1a1a;
+            border-bottom: 1px solid #4a8a4a;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 600;
+            color: #f0f0f0;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 1rem;
+            color: #b0b0b0;
+            font-weight: 400;
+        }
+
+        .metrics {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            background: #151515;
+            border-bottom: 1px solid #4a8a4a;
+            padding: 20px 0;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #6aa06a;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #a0a0a0;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .loads-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .load-card {
+            background: #1a1a1a;
+            border: 1px solid #4a8a4a;
+            border-radius: 8px;
+            padding: 25px;
+            cursor: pointer;
+            transition: border-color 0.2s ease, box-shadow 0.2s;
+        }
+
+        .load-card:hover {
+            border-color: #6aa06a;
+            box-shadow: 0 2px 16px #6aa06a33;
+        }
+
+        .load-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #4a8a4a;
+        }
+
+        .load-id {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #6aa06a;
+        }
+
+        .booked-badge {
+            background: #4a8a4a;
+            color: #d0f0d0;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-size: 0.8rem;
+            color: #a0a0a0;
+            font-weight: 500;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 1rem;
+            color: #f0f0f0;
+            font-weight: 400;
+            word-break: break-word;
+        }
+
+        .route-info {
+            grid-column: 1 / -1;
+            background: #151515;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #4a8a4a;
+            margin: 20px 0;
+        }
+
+        .route-arrow {
+            color: #6aa06a;
+            font-size: 1.1rem;
+            margin: 0 12px;
+        }
+
+        .metrics-row {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #4a8a4a;
+        }
+
+        .metric {
+            text-align: center;
+            flex: 1;
+        }
+
+        .metric-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #6aa06a;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: #a0a0a0;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            font-size: 1.1rem;
+            color: #b0b0b0;
+        }
+
+        .error {
+            text-align: center;
+            padding: 60px 20px;
+            color: #e08080;
+            font-size: 1.1rem;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: auto;
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        .modal-content {
+            background: #222;
+            margin: 60px auto;
+            padding: 30px 30px 20px 30px;
+            border-radius: 10px;
+            max-width: 600px;
+            color: #f0f0f0;
+            position: relative;
+        }
+
+        .close {
+            color: #aaa;
+            position: absolute;
+            top: 18px;
+            right: 24px;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #fff;
+        }
+
+        .transcript-box {
+            background: #181818;
+            border: 1px solid #4a8a4a;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 18px;
+            font-size: 0.98rem;
+            color: #d0f0d0;
+            max-height: 250px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .dashboard-label {
+            font-size: 1.1rem;
+            color: #6aa06a;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .loads-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .container {
+                padding: 20px 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Booked Loads Dashboard</h1>
+        <p>All loads that have been booked, with metrics and details</p>
+        <a href="carriers.html" style="color:#6aa06a;text-decoration:underline;font-size:1rem;">← Back to Pending
+            Loads</a>
+    </div>
+    <div class="metrics" id="metrics-bar">
+        <div class="metric">
+            <div class="metric-value" id="avg-duration">-</div>
+            <div class="metric-label">Avg. Call Duration (min)</div>
+        </div>
+        <div class="metric">
+            <div class="metric-value" id="avg-diff">-</div>
+            <div class="metric-label">Avg. Price Difference ($)</div>
+        </div>
+        <div class="metric">
+            <div class="metric-value" id="booked-count">-</div>
+            <div class="metric-label">Total Booked Loads</div>
+        </div>
+    </div>
+    <div class="container">
+        <div id="loads-container" class="loads-grid">
+            <div class="loading">Loading booked loads...</div>
+        </div>
+    </div>
+    <div id="loadModal" class="modal">
+        <div class="modal-content" id="modalContent">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modalDetails"></div>
+        </div>
+    </div>
+    <script>
+        let bookedLoads = [];
+        let API_KEY = null;
+
+        function fetchWithApiKey(url, options = {}) {
+            options.headers = options.headers || {};
+            options.headers['X-API-KEY'] = API_KEY;
+            return fetch(url, options);
+        }
+
+        function getApiKeyAndLoad() {
+            fetch('/api/public_config')
+                .then(res => res.json())
+                .then(cfg => {
+                    API_KEY = cfg.api_key;
+                    loadBookedLoads();
+                });
+        }
+
+        function loadBookedLoads() {
+            fetchWithApiKey('/api/booked_loads')
+                .then(res => res.json())
+                .then(data => {
+                    bookedLoads = data.booked_loads || [];
+                    displayBookedLoads(bookedLoads);
+                });
+            fetchWithApiKey('/api/booked_metrics')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('avg-duration').textContent = data.avg_call_duration ? (data.avg_call_duration / 60).toFixed(1) : '-';
+                    document.getElementById('avg-diff').textContent = data.avg_price_diff || '-';
+                    document.getElementById('booked-count').textContent = data.count || '0';
+                });
+        }
+        function displayBookedLoads(loads) {
+            const container = document.getElementById('loads-container');
+            if (!loads.length) {
+                container.innerHTML = '<div class="loading">No booked loads found</div>';
+                return;
+            }
+            container.innerHTML = loads.map(load => `
+                <div class="load-card" onclick="showLoadModal('${load.load_id}')">
+                    <div class="load-header">
+                        <div class="load-id">Load #${load.load_id}</div>
+                        <div class="booked-badge">Booked</div>
+                    </div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Equipment Type</div>
+                            <div class="info-value">${load.equipment_type || 'N/A'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Commodity</div>
+                            <div class="info-value">${load.commodity_type || 'N/A'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Weight</div>
+                            <div class="info-value">${load.weight ? `${load.weight} lbs` : 'N/A'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Final Rate</div>
+                            <div class="info-value">$${load.final_rate || 'N/A'}</div>
+                        </div>
+                        <div class="route-info">
+                            <div style="text-align: center;">
+                                <span class="info-value">${load.origin || 'N/A'}</span>
+                                <span class="route-arrow">→</span>
+                                <span class="info-value">${load.destination || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Booked At</div>
+                            <div class="info-value">${formatDateTime(load.booked_at)}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Call Duration</div>
+                            <div class="info-value">${load.call_duration ? (load.call_duration / 60).toFixed(1) + ' min' : 'N/A'}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        function showLoadModal(loadId) {
+            fetchWithApiKey(`/api/booked_loads/${loadId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.booked_load) return;
+                    const load = data.booked_load;
+                    let transcript = load.transcript;
+                    try {
+                        const parsed = JSON.parse(transcript);
+                        if (Array.isArray(parsed)) {
+                            transcript = parsed.map(line => `- ${line}`).join('\n');
+                        }
+                    } catch { }
+                    document.getElementById('modalDetails').innerHTML = `
+                        <div class="dashboard-label">Load #${load.load_id} Dashboard</div>
+                        <div class="info-item"><span class="info-label">Route</span><span class="info-value">${load.origin} → ${load.destination}</span></div>
+                        <div class="info-item"><span class="info-label">Equipment</span><span class="info-value">${load.equipment_type}</span></div>
+                        <div class="info-item"><span class="info-label">Commodity</span><span class="info-value">${load.commodity_type}</span></div>
+                        <div class="info-item"><span class="info-label">Weight</span><span class="info-value">${load.weight} lbs</span></div>
+                        <div class="info-item"><span class="info-label">Initial Rate</span><span class="info-value">$${load.initial_rate}</span></div>
+                        <div class="info-item"><span class="info-label">Final Rate</span><span class="info-value">$${load.final_rate}</span></div>
+                        <div class="info-item"><span class="info-label">Price Difference</span><span class="info-value">$${(parseFloat(load.final_rate) - parseFloat(load.initial_rate)).toFixed(2)}</span></div>
+                        <div class="info-item"><span class="info-label">Call Duration</span><span class="info-value">${load.call_duration ? (load.call_duration / 60).toFixed(1) + ' min' : 'N/A'}</span></div>
+                        <div class="info-item"><span class="info-label">Booked At</span><span class="info-value">${formatDateTime(load.booked_at)}</span></div>
+                        <div class="dashboard-label" style="margin-top:18px;">Call Transcript</div>
+                        <div class="transcript-box">${transcript ? transcript : 'No transcript available.'}</div>
+                    `;
+                    document.getElementById('loadModal').style.display = 'block';
+                });
+        }
+        function closeModal() {
+            document.getElementById('loadModal').style.display = 'none';
+        }
+        function formatDateTime(dateTimeStr) {
+            if (!dateTimeStr) return 'N/A';
+            try {
+                const date = new Date(dateTimeStr);
+                return date.toLocaleString();
+            } catch {
+                return dateTimeStr;
+            }
+        }
+        document.addEventListener('DOMContentLoaded', getApiKeyAndLoad);
+        window.onclick = function (event) {
+            const modal = document.getElementById('loadModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+
+</html>

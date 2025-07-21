@@ -133,7 +133,6 @@ def webhook():
             }), 200
     
     elif request.method == "POST":
-        # Handle POST requests with JSON payload
         payload = request.get_json(force=True, silent=True)
         if not payload:
             return jsonify({"error": "Invalid JSON"}), 400
@@ -141,25 +140,28 @@ def webhook():
         # Get query parameters and headers
         params = dict(request.args)
         headers = dict(request.headers)
-        
-        # Print/log the received data
-        print("=" * 50)
-        print("🚛 WEBHOOK POST RECEIVED")
-        print("=" * 50)
-        print(f"📅 Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"🌐 URL: {request.url}")
-        print(f"📋 Method: {request.method}")
-        print(f"🔑 API Key: {headers.get('X-API-KEY', 'Not provided')}")
-        print("\n📦 PAYLOAD DATA:")
-        print(json.dumps(payload, indent=2))
-        print("\n🔗 QUERY PARAMETERS:")
-        print(json.dumps(params, indent=2))
-        print("\n📋 HEADERS:")
-        for key, value in headers.items():
-            if key.lower() not in ['x-api-key', 'authorization']:  # Don't log sensitive headers
-                print(f"   {key}: {value}")
-        print("=" * 50)
-        
+                
+        # Detect booking webhook (has transcript and call_duration)
+        if payload.get('transcript') is not None and payload.get('call_duration') is not None:
+            # Booking webhook: update booking info in DB
+            chosen_id = payload.get('chosen_id')
+            booking_data = {
+                'final_rate': payload.get('final_rate'),
+                'initial_rate': payload.get('initial_rate'),
+                'transcript': payload.get('transcript'),
+                'call_duration': payload.get('call_duration'),
+                'booked_at': datetime.utcnow().isoformat()
+            }
+            updated = db_manager.update_booking_info(chosen_id, booking_data)
+            if updated:
+                return jsonify({
+                    "status": "booked",
+                    "message": f"Load {chosen_id} marked as booked and updated.",
+                    "booking_data": booking_data
+                }), 200
+            else:
+                return jsonify({"error": f"Failed to update booking info for {chosen_id}"}), 500
+            
         # Process the specific payload format
         try:
             mc_num = payload.get('mc_num')
@@ -300,6 +302,48 @@ def load_distance_details(load_id):
         "route_distance_miles": round(route_distance, 1) if route_distance else None
     })
 
+@app.route("/api/pending_loads", methods=["GET"])
+def get_pending_loads():
+    """Return all pending (not booked) loads."""
+    carriers = db_manager.get_all_carriers()
+    pending = [c for c in carriers if c.get('status') not in ('booked', 'ready')]
+    return jsonify({"pending_loads": pending, "count": len(pending)})
+
+@app.route("/api/booked_loads", methods=["GET"])
+def get_booked_loads():
+    """Return all booked loads."""
+    carriers = db_manager.get_all_carriers()
+    booked = [c for c in carriers if c.get('status') == 'booked']
+    return jsonify({"booked_loads": booked, "count": len(booked)})
+
+@app.route("/api/booked_loads/<load_id>", methods=["GET"])
+def get_booked_load_details(load_id):
+    """Return details for a specific booked load."""
+    carrier = db_manager.get_carrier_by_id(load_id)
+    if not carrier or carrier.get('status') != 'booked':
+        return jsonify({"error": "Booked load not found"}), 404
+    return jsonify({"booked_load": carrier})
+
+@app.route("/api/booked_metrics", methods=["GET"])
+def get_booked_metrics():
+    """Return metrics for booked loads (avg call duration, avg price diff, count, etc)."""
+    carriers = db_manager.get_all_carriers()
+    booked = [c for c in carriers if c.get('status') == 'booked']
+    if not booked:
+        return jsonify({"count": 0, "avg_call_duration": 0, "avg_price_diff": 0})
+    total_duration = sum(float(c.get('call_duration') or 0) for c in booked)
+    total_price_diff = sum(
+        float(c.get('final_rate') or 0) - float(c.get('initial_rate') or 0)
+        for c in booked if c.get('final_rate') is not None and c.get('initial_rate') is not None
+    )
+    avg_duration = total_duration / len(booked)
+    avg_price_diff = total_price_diff / len(booked)
+    return jsonify({
+        "count": len(booked),
+        "avg_call_duration": round(avg_duration, 2),
+        "avg_price_diff": round(avg_price_diff, 2)
+    })
+
 def find_closest_load_to_city(city_name: str) -> Dict:
     """Find the closest load to a given city."""
     # Geocode the input city
@@ -362,6 +406,12 @@ def find_closest_load_to_city(city_name: str) -> Dict:
         "all_distances": distances[:5],  # Top 5 closest
         "total_loads_checked": len(carriers)
     }
+
+@app.route("/api/public_config", methods=["GET"])
+def public_config():
+    return jsonify({
+        "api_key": os.environ.get("WEBHOOK_API_KEY", "CHANGE_ME")
+    })
 
 @app.route("/")
 def home():

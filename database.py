@@ -29,7 +29,12 @@ class DatabaseManager:
                 num_of_pieces INTEGER,
                 miles REAL,
                 dimensions TEXT,
-                status TEXT DEFAULT 'pending'
+                status TEXT DEFAULT 'pending',
+                final_rate REAL,
+                initial_rate REAL,
+                transcript TEXT,
+                call_duration INTEGER,
+                booked_at TEXT
             )
         ''')
         
@@ -66,7 +71,12 @@ class DatabaseManager:
                 'num_of_pieces': 500,
                 'miles': 372.0,
                 'dimensions': '48x48x96',
-                'status': 'pending'
+                'status': 'pending',
+                'final_rate': 1250.00,
+                'initial_rate': 1250.00,
+                'transcript': 'Sample transcript for LOAD001',
+                'call_duration': 3600,
+                'booked_at': '2024-01-15 08:00:00'
             },
             {
                 'load_id': 'LOAD002',
@@ -82,7 +92,12 @@ class DatabaseManager:
                 'num_of_pieces': 1200,
                 'miles': 283.0,
                 'dimensions': '53x102x102',
-                'status': 'calling'
+                'status': 'calling',
+                'final_rate': 1800.00,
+                'initial_rate': 1800.00,
+                'transcript': 'Sample transcript for LOAD002',
+                'call_duration': 2700,
+                'booked_at': '2024-01-15 10:30:00'
             },
             {
                 'load_id': 'LOAD003',
@@ -98,7 +113,12 @@ class DatabaseManager:
                 'num_of_pieces': 8,
                 'miles': 239.0,
                 'dimensions': '48x96x120',
-                'status': 'ready'
+                'status': 'ready',
+                'final_rate': 950.00,
+                'initial_rate': 950.00,
+                'transcript': 'Sample transcript for LOAD003',
+                'call_duration': 2100,
+                'booked_at': '2024-01-15 06:00:00'
             },
             
         ]
@@ -108,14 +128,16 @@ class DatabaseManager:
                 INSERT INTO carriers (
                     load_id, origin, destination, pickup_datetime, delivery_datetime,
                     equipment_type, loadboard_rate, notes, weight, commodity_type,
-                    num_of_pieces, miles, dimensions, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    num_of_pieces, miles, dimensions, status, final_rate, initial_rate, transcript, call_duration, booked_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                data['load_id'], data['origin'], data['destination'],
-                data['pickup_datetime'], data['delivery_datetime'],
-                data['equipment_type'], data['loadboard_rate'], data['notes'],
-                data['weight'], data['commodity_type'], data['num_of_pieces'],
-                data['miles'], data['dimensions'], data['status']
+                data.get('load_id'), data.get('origin'), data.get('destination'),
+                data.get('pickup_datetime'), data.get('delivery_datetime'),
+                data.get('equipment_type'), data.get('loadboard_rate'), data.get('notes'),
+                data.get('weight'), data.get('commodity_type'), data.get('num_of_pieces'),
+                data.get('miles'), data.get('dimensions'), data.get('status'),
+                data.get('final_rate'), data.get('initial_rate'), data.get('transcript'),
+                data.get('call_duration'), data.get('booked_at')
             ))
     
     def get_all_carriers(self) -> List[Dict]:
@@ -127,7 +149,7 @@ class DatabaseManager:
         cursor.execute('''
             SELECT load_id, origin, destination, pickup_datetime, delivery_datetime,
                    equipment_type, loadboard_rate, notes, weight, commodity_type,
-                   num_of_pieces, miles, dimensions, status
+                   num_of_pieces, miles, dimensions, status, final_rate, initial_rate, transcript, call_duration, booked_at
             FROM carriers
             ORDER BY pickup_datetime DESC
         ''')
@@ -136,22 +158,7 @@ class DatabaseManager:
         carriers = []
         
         for row in rows:
-            carrier = {
-                'load_id': row['load_id'],
-                'origin': row['origin'],
-                'destination': row['destination'],
-                'pickup_datetime': row['pickup_datetime'],
-                'delivery_datetime': row['delivery_datetime'],
-                'equipment_type': row['equipment_type'],
-                'loadboard_rate': row['loadboard_rate'],
-                'notes': row['notes'],
-                'weight': row['weight'],
-                'commodity_type': row['commodity_type'],
-                'num_of_pieces': row['num_of_pieces'],
-                'miles': row['miles'],
-                'dimensions': row['dimensions'],
-                'status': row['status']
-            }
+            carrier = dict(row)
             carriers.append(carrier)
         
         conn.close()
@@ -166,7 +173,7 @@ class DatabaseManager:
         cursor.execute('''
             SELECT load_id, origin, destination, pickup_datetime, delivery_datetime,
                    equipment_type, loadboard_rate, notes, weight, commodity_type,
-                   num_of_pieces, miles, dimensions, status
+                   num_of_pieces, miles, dimensions, status, final_rate, initial_rate, transcript, call_duration, booked_at
             FROM carriers
             WHERE load_id = ?
         ''', (load_id,))
@@ -175,22 +182,7 @@ class DatabaseManager:
         conn.close()
         
         if row:
-            return {
-                'load_id': row['load_id'],
-                'origin': row['origin'],
-                'destination': row['destination'],
-                'pickup_datetime': row['pickup_datetime'],
-                'delivery_datetime': row['delivery_datetime'],
-                'equipment_type': row['equipment_type'],
-                'loadboard_rate': row['loadboard_rate'],
-                'notes': row['notes'],
-                'weight': row['weight'],
-                'commodity_type': row['commodity_type'],
-                'num_of_pieces': row['num_of_pieces'],
-                'miles': row['miles'],
-                'dimensions': row['dimensions'],
-                'status': row['status']
-            }
+            return dict(row)
         return None
     
     def add_carrier(self, carrier_data: Dict) -> bool:
@@ -203,14 +195,16 @@ class DatabaseManager:
                 INSERT INTO carriers (
                     load_id, origin, destination, pickup_datetime, delivery_datetime,
                     equipment_type, loadboard_rate, notes, weight, commodity_type,
-                    num_of_pieces, miles, dimensions, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    num_of_pieces, miles, dimensions, status, final_rate, initial_rate, transcript, call_duration, booked_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                carrier_data['load_id'], carrier_data['origin'], carrier_data['destination'],
-                carrier_data['pickup_datetime'], carrier_data['delivery_datetime'],
-                carrier_data['equipment_type'], carrier_data['loadboard_rate'], carrier_data['notes'],
-                carrier_data['weight'], carrier_data['commodity_type'], carrier_data['num_of_pieces'],
-                carrier_data['miles'], carrier_data['dimensions'], carrier_data['status']
+                carrier_data.get('load_id'), carrier_data.get('origin'), carrier_data.get('destination'),
+                carrier_data.get('pickup_datetime'), carrier_data.get('delivery_datetime'),
+                carrier_data.get('equipment_type'), carrier_data.get('loadboard_rate'), carrier_data.get('notes'),
+                carrier_data.get('weight'), carrier_data.get('commodity_type'), carrier_data.get('num_of_pieces'),
+                carrier_data.get('miles'), carrier_data.get('dimensions'), carrier_data.get('status'),
+                carrier_data.get('final_rate'), carrier_data.get('initial_rate'), carrier_data.get('transcript'),
+                carrier_data.get('call_duration'), carrier_data.get('booked_at')
             ))
             
             conn.commit()
@@ -230,14 +224,17 @@ class DatabaseManager:
                 UPDATE carriers SET
                     origin = ?, destination = ?, pickup_datetime = ?, delivery_datetime = ?,
                     equipment_type = ?, loadboard_rate = ?, notes = ?, weight = ?,
-                    commodity_type = ?, num_of_pieces = ?, miles = ?, dimensions = ?, status = ?
+                    commodity_type = ?, num_of_pieces = ?, miles = ?, dimensions = ?, status = ?,
+                    final_rate = ?, initial_rate = ?, transcript = ?, call_duration = ?, booked_at = ?
                 WHERE load_id = ?
             ''', (
-                carrier_data['origin'], carrier_data['destination'],
-                carrier_data['pickup_datetime'], carrier_data['delivery_datetime'],
-                carrier_data['equipment_type'], carrier_data['loadboard_rate'], carrier_data['notes'],
-                carrier_data['weight'], carrier_data['commodity_type'], carrier_data['num_of_pieces'],
-                carrier_data['miles'], carrier_data['dimensions'], carrier_data['status'], load_id
+                carrier_data.get('origin'), carrier_data.get('destination'),
+                carrier_data.get('pickup_datetime'), carrier_data.get('delivery_datetime'),
+                carrier_data.get('equipment_type'), carrier_data.get('loadboard_rate'), carrier_data.get('notes'),
+                carrier_data.get('weight'), carrier_data.get('commodity_type'), carrier_data.get('num_of_pieces'),
+                carrier_data.get('miles'), carrier_data.get('dimensions'), carrier_data.get('status'),
+                carrier_data.get('final_rate'), carrier_data.get('initial_rate'), carrier_data.get('transcript'),
+                carrier_data.get('call_duration'), carrier_data.get('booked_at'), load_id
             ))
             
             conn.commit()
@@ -245,6 +242,35 @@ class DatabaseManager:
             return True
         except Exception as e:
             print(f"Error updating carrier: {e}")
+            return False
+    
+    def update_booking_info(self, load_id: str, booking_data: Dict) -> bool:
+        """Update booking info for a carrier (set status to 'booked')"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE carriers SET
+                    status = 'booked',
+                    final_rate = ?,
+                    initial_rate = ?,
+                    transcript = ?,
+                    call_duration = ?,
+                    booked_at = ?
+                WHERE load_id = ?
+            ''', (
+                booking_data.get('final_rate'),
+                booking_data.get('initial_rate'),
+                booking_data.get('transcript'),
+                booking_data.get('call_duration'),
+                booking_data.get('booked_at'),
+                load_id
+            ))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error updating booking info: {e}")
             return False
     
     def delete_carrier(self, load_id: str) -> bool:
