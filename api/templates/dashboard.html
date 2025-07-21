@@ -284,6 +284,14 @@
             color: #d0f0d0;
         }
 
+        .carrier-window.expanded .info-grid {
+            display: grid;
+        }
+
+        .carrier-window.collapsed .info-grid {
+            display: none;
+        }
+
         @media (max-width: 768px) {
             .carriers-grid {
                 grid-template-columns: 1fr;
@@ -315,6 +323,10 @@
     </div>
 
     <div class="container">
+        <div class="tab-section" style="display: flex; gap: 20px; margin-bottom: 20px;">
+            <button id="pendingTab" class="action-btn" onclick="showPending()">Pending</button>
+            <button id="bookedTab" class="action-btn secondary" onclick="showBooked()">Booked</button>
+        </div>
         <div class="search-section">
             <input type="text" id="searchInput" class="search-input"
                 placeholder="Search carriers by load ID, origin, destination, or equipment type...">
@@ -323,36 +335,58 @@
                 <button class="action-btn secondary" onclick="clearSearch()">Clear</button>
             </div>
         </div>
-
         <div id="carriers-container" class="carriers-grid">
             <div class="loading">Loading carrier information...</div>
         </div>
     </div>
-
-    <button class="refresh-btn" onclick="loadCarriers()">Refresh</button>
+    <button class="refresh-btn" onclick="refreshCurrentTab()">Refresh</button>
 
     <script>
         let allCarriers = [];
         let filteredCarriers = [];
+        let allBookings = [];
+        let currentTab = 'pending';
+
+        function showPending() {
+            currentTab = 'pending';
+            document.getElementById('pendingTab').classList.remove('secondary');
+            document.getElementById('bookedTab').classList.add('secondary');
+            document.querySelector('.search-section').style.display = '';
+            loadCarriers();
+        }
+
+        function showBooked() {
+            currentTab = 'booked';
+            document.getElementById('bookedTab').classList.remove('secondary');
+            document.getElementById('pendingTab').classList.add('secondary');
+            document.querySelector('.search-section').style.display = 'none';
+            loadBookings();
+        }
+
+        function refreshCurrentTab() {
+            if (currentTab === 'pending') {
+                loadCarriers();
+            } else {
+                loadBookings();
+            }
+        }
 
         function loadCarriers() {
             const container = document.getElementById('carriers-container');
             container.innerHTML = '<div class="loading">Loading carrier information...</div>';
-
-            fetch('/carriers/api/carriers')
+            fetch('/carriers/api/carriers', {
+                headers: {
+                    'X-API-KEY': 'UBNfljhgZwVGTIIXMsgH27EQHz4WULkX29k3dnsN8r0'
+                }
+            })
                 .then(response => response.json())
                 .then(data => {
+                    console.log('[DEBUG] /carriers/api/carriers response:', data);
                     if (data.error) {
                         container.innerHTML = `<div class="error">Error: ${data.error}</div>`;
                         return;
                     }
-
-                    if (data.carriers.length === 0) {
-                        container.innerHTML = '<div class="loading">No carriers found</div>';
-                        return;
-                    }
-
-                    allCarriers = data.carriers;
+                    allCarriers = data.carriers.filter(c => c.status === 'pending');
                     filteredCarriers = [...allCarriers];
                     displayCarriers(filteredCarriers);
                 })
@@ -361,42 +395,58 @@
                 });
         }
 
+        function loadBookings() {
+            const container = document.getElementById('carriers-container');
+            container.innerHTML = '<div class="loading">Loading booked loads...</div>';
+            fetch('/carriers/api/bookings', {
+                headers: {
+                    'X-API-KEY': 'UBNfljhgZwVGTIIXMsgH27EQHz4WULkX29k3dnsN8r0'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('[DEBUG] /carriers/api/bookings response:', data);
+                    if (!data.success) {
+                        container.innerHTML = `<div class="error">Error: ${data.error || 'Unknown error'}</div>`;
+                        return;
+                    }
+                    allBookings = data.bookings;
+                    displayBookings(allBookings);
+                })
+                .catch(error => {
+                    container.innerHTML = `<div class="error">Error loading bookings: ${error.message}</div>`;
+                });
+        }
+
         function displayCarriers(carriers) {
             const container = document.getElementById('carriers-container');
-
             if (carriers.length === 0) {
                 container.innerHTML = '<div class="loading">No carriers found</div>';
                 return;
             }
-
-            container.innerHTML = carriers.map(carrier => `
-                <div class="carrier-window">
+            container.innerHTML = carriers.map((carrier, idx) => `
+                <div class="carrier-window" data-idx="${idx}">
                     <div class="carrier-header">
                         <div class="load-id">Load #${carrier.load_id}</div>
-                        <div class="status-badge ${carrier.status || 'pending'}">${getStatusText(carrier.status || 'pending')}</div>
+                        <div class="status-badge pending">Pending Carrier</div>
                     </div>
-                    
                     <div class="info-grid">
                         <div class="info-item">
                             <div class="info-label">Equipment Type</div>
                             <div class="info-value">${carrier.equipment_type || 'N/A'}</div>
                         </div>
-                        
                         <div class="info-item">
                             <div class="info-label">Commodity</div>
                             <div class="info-value">${carrier.commodity_type || 'N/A'}</div>
                         </div>
-                        
                         <div class="info-item">
                             <div class="info-label">Weight</div>
                             <div class="info-value">${carrier.weight ? `${carrier.weight} lbs` : 'N/A'}</div>
                         </div>
-                        
                         <div class="info-item">
                             <div class="info-label">Pieces</div>
                             <div class="info-value">${carrier.num_of_pieces || 'N/A'}</div>
                         </div>
-                        
                         <div class="route-info">
                             <div style="text-align: center;">
                                 <span class="info-value">${carrier.origin || 'N/A'}</span>
@@ -404,17 +454,14 @@
                                 <span class="info-value">${carrier.destination || 'N/A'}</span>
                             </div>
                         </div>
-                        
                         <div class="info-item">
                             <div class="info-label">Pickup</div>
                             <div class="info-value">${formatDateTime(carrier.pickup_datetime)}</div>
                         </div>
-                        
                         <div class="info-item">
                             <div class="info-label">Delivery</div>
                             <div class="info-value">${formatDateTime(carrier.delivery_datetime)}</div>
                         </div>
-                        
                         <div class="metrics-row">
                             <div class="metric">
                                 <div class="metric-value">${carrier.miles || 'N/A'}</div>
@@ -429,37 +476,139 @@
                                 <div class="metric-label">Dimensions</div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="action-buttons" style="margin-top: 20px;">
-                        <button class="action-btn" onclick="triggerWorkflow('${carrier.load_id}')">Trigger Workflow</button>
-                        <button class="action-btn secondary" onclick="updateStatus('${carrier.load_id}', 'pending')">Set Pending</button>
-                        <button class="action-btn secondary" onclick="updateStatus('${carrier.load_id}', 'calling')">Set Calling</button>
-                        <button class="action-btn secondary" onclick="updateStatus('${carrier.load_id}', 'ready')">Set Ready</button>
-                    </div>
-                    
-                    ${carrier.notes ? `
+                        ${carrier.notes ? `
                         <div class="notes-section">
                             <div class="info-label">Notes</div>
                             <div class="info-value">${carrier.notes}</div>
                         </div>
-                    ` : ''}
+                        ` : ''}
+                    </div>
                 </div>
             `).join('');
         }
 
+        function displayBookings(bookings) {
+            const container = document.getElementById('carriers-container');
+            if (bookings.length === 0) {
+                container.innerHTML = '<div class="loading">No booked loads found</div>';
+                return;
+            }
+            container.innerHTML = bookings.map((booking, idx) => {
+                const carrier = booking.carrier || {};
+                return `
+                <div class="carrier-window" data-idx="${idx}">
+                    <div class="carrier-header">
+                        <div class="load-id">Load #${carrier.load_id || ''}</div>
+                        <div class="status-badge ready">Booked</div>
+                    </div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Equipment Type</div>
+                            <div class="info-value">${carrier.equipment_type || 'N/A'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Commodity</div>
+                            <div class="info-value">${carrier.commodity_type || 'N/A'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Weight</div>
+                            <div class="info-value">${carrier.weight ? `${carrier.weight} lbs` : 'N/A'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Pieces</div>
+                            <div class="info-value">${carrier.num_of_pieces || 'N/A'}</div>
+                        </div>
+                        <div class="route-info">
+                            <div style="text-align: center;">
+                                <span class="info-value">${carrier.origin || 'N/A'}</span>
+                                <span class="route-arrow">→</span>
+                                <span class="info-value">${carrier.destination || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Pickup</div>
+                            <div class="info-value">${formatDateTime(carrier.pickup_datetime)}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Delivery</div>
+                            <div class="info-value">${formatDateTime(carrier.delivery_datetime)}</div>
+                        </div>
+                        <div class="metrics-row">
+                            <div class="metric">
+                                <div class="metric-value" style="color:#6aa06a;">${booking.mc_num || 'N/A'}</div>
+                                <div class="metric-label">MC Number</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value" style="color:#6aa06a;">${booking.duration || 'N/A'}</div>
+                                <div class="metric-label">Duration (s)</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value" style="color:#6aa06a;">$${booking.initial_rate || 'N/A'}</div>
+                                <div class="metric-label">Initial Rate</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value" style="color:#6aa06a;">$${booking.final_rate || 'N/A'}</div>
+                                <div class="metric-label">Final Rate</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value" style="color:#6aa06a;">${booking.sentiment || 'N/A'}</div>
+                                <div class="metric-label">Sentiment</div>
+                            </div>
+                        </div>
+                        <div style="text-align:center; margin-top:20px;">
+                            <button class="action-btn" onclick="showTranscriptModal('${encodeURIComponent(booking.transcript || '')}')">View Transcript</button>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // Modal for transcript
+        document.body.insertAdjacentHTML('beforeend', `
+        <div id="transcriptModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+            <div id="transcriptContent" style="background:#222; border-radius:10px; max-width:500px; width:90vw; max-height:80vh; overflow-y:auto; padding:30px 20px 20px 20px; position:relative;">
+                <button onclick="closeTranscriptModal()" style="position:absolute; top:10px; right:15px; background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
+                <h2 style="text-align:center; color:#6aa06a; margin-bottom:20px;">Transcript</h2>
+                <div id="transcriptChat" style="display:flex; flex-direction:column; gap:12px;"></div>
+            </div>
+        </div>
+        <style>
+        .chat-bubble { max-width: 80%; padding: 10px 16px; border-radius: 18px; font-size: 1rem; line-height: 1.5; }
+        .chat-bubble.user { background: #4a8a4a; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .chat-bubble.assistant { background: #333; color: #d0f0d0; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .chat-bubble.event, .chat-bubble.tool { background: #888; color: #fff; align-self: center; font-size:0.9rem; border-radius: 10px; }
+        </style>
+        `);
+
+        function showTranscriptModal(transcriptStr) {
+            let chatDiv = document.getElementById('transcriptChat');
+            chatDiv.innerHTML = '';
+            let transcript = [];
+            try {
+                transcript = JSON.parse(decodeURIComponent(transcriptStr));
+            } catch (e) {
+                chatDiv.innerHTML = '<div style="color:#e08080;">Invalid transcript format</div>';
+            }
+            transcript.forEach(msg => {
+                if (!msg.content) return;
+                let role = msg.role || 'event';
+                let bubbleClass = 'chat-bubble ' + (role === 'user' ? 'user' : (role === 'assistant' ? 'assistant' : (role === 'tool' || role === 'event' ? 'event' : 'assistant')));
+                let content = msg.content;
+                chatDiv.innerHTML += `<div class="${bubbleClass}">${content}</div>`;
+            });
+            document.getElementById('transcriptModal').style.display = 'flex';
+        }
+        function closeTranscriptModal() {
+            document.getElementById('transcriptModal').style.display = 'none';
+        }
+
         function getStatusText(status) {
-            const statusMap = {
-                'pending': 'Pending Carrier',
-                'calling': 'Calling Carrier',
-                'ready': 'Carrier Ready'
-            };
-            return statusMap[status] || 'Pending Carrier';
+            return status === 'ready' ? 'Carrier Ready' : 'Pending Carrier';
         }
 
         function searchCarriers() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-
             if (!searchTerm.trim()) {
                 filteredCarriers = [...allCarriers];
             } else {
@@ -471,7 +620,6 @@
                     (carrier.commodity_type && carrier.commodity_type.toLowerCase().includes(searchTerm))
                 );
             }
-
             displayCarriers(filteredCarriers);
         }
 
@@ -479,112 +627,6 @@
             document.getElementById('searchInput').value = '';
             filteredCarriers = [...allCarriers];
             displayCarriers(filteredCarriers);
-        }
-
-        function triggerWorkflow(loadId) {
-            const carrier = allCarriers.find(c => c.load_id === loadId);
-            if (!carrier) {
-                alert('Carrier not found');
-                return;
-            }
-
-            const webhookData = {
-                load_id: carrier.load_id,
-                origin: carrier.origin,
-                destination: carrier.destination,
-                pickup_datetime: carrier.pickup_datetime,
-                delivery_datetime: carrier.delivery_datetime,
-                equipment_type: carrier.equipment_type,
-                loadboard_rate: carrier.loadboard_rate,
-                weight: carrier.weight,
-                commodity_type: carrier.commodity_type,
-                num_of_pieces: carrier.num_of_pieces,
-                miles: carrier.miles,
-                dimensions: carrier.dimensions,
-                notes: carrier.notes,
-                status: carrier.status || 'pending',
-                timestamp: new Date().toISOString()
-            };
-
-            fetch('https://workflows.platform.happyrobot.ai/hooks/59hhvrerzsr3', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(webhookData)
-            })
-                .then(response => {
-                    if (response.ok) {
-                        showStatusUpdate(`Workflow triggered successfully for Load #${loadId}`);
-                    } else {
-                        showStatusUpdate(`Failed to trigger workflow for Load #${loadId}`);
-                    }
-                })
-                .catch(error => {
-                    showStatusUpdate(`Error triggering workflow: ${error.message}`);
-                });
-        }
-
-        function updateStatus(loadId, newStatus) {
-            const carrier = allCarriers.find(c => c.load_id === loadId);
-            if (!carrier) {
-                alert('Carrier not found');
-                return;
-            }
-
-            // Update the carrier status locally
-            carrier.status = newStatus;
-
-            // Update the display
-            displayCarriers(filteredCarriers);
-
-            // Send status update to webhook
-            const statusData = {
-                load_id: loadId,
-                status: newStatus,
-                status_text: getStatusText(newStatus),
-                timestamp: new Date().toISOString(),
-                carrier_info: carrier
-            };
-
-            fetch('https://workflows.platform.happyrobot.ai/hooks/59hhvrerzsr3', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(statusData)
-            })
-                .then(response => {
-                    if (response.ok) {
-                        showStatusUpdate(`Status updated to ${getStatusText(newStatus)} for Load #${loadId}`);
-                    } else {
-                        showStatusUpdate(`Failed to update status for Load #${loadId}`);
-                    }
-                })
-                .catch(error => {
-                    showStatusUpdate(`Error updating status: ${error.message}`);
-                });
-        }
-
-        function showStatusUpdate(message) {
-            // Create a temporary status message
-            const statusDiv = document.createElement('div');
-            statusDiv.className = 'status-update';
-            statusDiv.textContent = message;
-            statusDiv.style.position = 'fixed';
-            statusDiv.style.top = '20px';
-            statusDiv.style.right = '20px';
-            statusDiv.style.zIndex = '1000';
-            statusDiv.style.maxWidth = '300px';
-
-            document.body.appendChild(statusDiv);
-
-            // Remove after 3 seconds
-            setTimeout(() => {
-                if (statusDiv.parentNode) {
-                    statusDiv.parentNode.removeChild(statusDiv);
-                }
-            }, 3000);
         }
 
         function formatDateTime(dateTimeStr) {
@@ -598,10 +640,10 @@
         }
 
         // Load carriers on page load
-        document.addEventListener('DOMContentLoaded', loadCarriers);
+        document.addEventListener('DOMContentLoaded', showPending);
 
         // Auto-refresh every 30 seconds
-        setInterval(loadCarriers, 30000);
+        setInterval(refreshCurrentTab, 30000);
 
         // Search on Enter key
         document.getElementById('searchInput').addEventListener('keypress', function (e) {

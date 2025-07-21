@@ -2,14 +2,33 @@ import sqlite3
 import os
 from datetime import datetime
 from typing import List, Dict, Optional
+import shutil
+
 
 class DatabaseManager:
     def __init__(self, db_path: str = "carriers.db"):
-        self.db_path = db_path
+        # Always reset /tmp/carriers.db to a fresh copy (or an empty file)
+        tmp_db = "/tmp/carriers.db"
+        project_db = os.path.join(os.getcwd(), db_path)
+
+        # Remove any old tmp copy
+        if os.path.exists(tmp_db):
+            os.remove(tmp_db)
+
+        # Seed a fresh DB into /tmp
+        if os.path.exists(project_db):
+            print(f"Seeding fresh DB: copying {project_db} → {tmp_db}")
+            shutil.copyfile(project_db, tmp_db)
+        else:
+            print(f"No bundled DB found; creating new empty DB at {tmp_db}")
+            open(tmp_db, "a").close()
+
+        # From here on, always use the tmp copy
+        self.db_path = tmp_db
         self.init_database()
     
     def init_database(self):
-        """Initialize the database with the carriers table"""
+        """Initialize the database with the carriers table and bookings table"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -41,6 +60,22 @@ class DatabaseManager:
             cursor.execute('ALTER TABLE carriers ADD COLUMN status TEXT DEFAULT "pending"')
             print("Added status column to existing database")
         
+        # Create bookings table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS bookings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                load_id TEXT,
+                mc_num TEXT,
+                final_rate TEXT,
+                initial_rate TEXT,
+                transcript TEXT,
+                sentiment TEXT,
+                duration TEXT,
+                timestamp TEXT,
+                FOREIGN KEY(load_id) REFERENCES carriers(load_id)
+            )
+        ''')
+        
         # Insert sample data if table is empty
         cursor.execute("SELECT COUNT(*) FROM carriers")
         if cursor.fetchone()[0] == 0:
@@ -59,7 +94,7 @@ class DatabaseManager:
                 'pickup_datetime': '2024-01-15 08:00:00',
                 'delivery_datetime': '2024-01-16 14:00:00',
                 'equipment_type': 'Dry Van',
-                'loadboard_rate': 1250.00,
+                'loadboard_rate': 1400.00,
                 'notes': 'Fragile electronics - handle with care',
                 'weight': 15000.0,
                 'commodity_type': 'Electronics',
@@ -70,8 +105,8 @@ class DatabaseManager:
             },
             {
                 'load_id': 'LOAD002',
-                'origin': 'Chicago, IL',
-                'destination': 'Detroit, MI',
+                'origin': 'San Francisco, CA',
+                'destination': 'Seattle, WA',
                 'pickup_datetime': '2024-01-15 10:30:00',
                 'delivery_datetime': '2024-01-15 18:00:00',
                 'equipment_type': 'Reefer',
@@ -82,7 +117,7 @@ class DatabaseManager:
                 'num_of_pieces': 1200,
                 'miles': 283.0,
                 'dimensions': '53x102x102',
-                'status': 'calling'
+                'status': 'pending'
             },
             {
                 'load_id': 'LOAD003',
@@ -98,7 +133,7 @@ class DatabaseManager:
                 'num_of_pieces': 8,
                 'miles': 239.0,
                 'dimensions': '48x96x120',
-                'status': 'ready'
+                'status': 'pending'
             },
             
         ]
@@ -262,5 +297,31 @@ class DatabaseManager:
             print(f"Error deleting carrier: {e}")
             return False
 
+    def add_booking(self, booking_data: Dict) -> bool:
+        """Add a new booking to the bookings table"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO bookings (
+                    load_id, mc_num, final_rate, initial_rate, transcript, sentiment, duration, timestamp
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                booking_data['load_id'],
+                booking_data['mc_num'],
+                booking_data['final_rate'],
+                booking_data['initial_rate'],
+                booking_data['transcript'],
+                booking_data['sentiment'],
+                booking_data['duration'],
+                booking_data['timestamp']
+            ))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error adding booking: {e}")
+            return False
+
 # Global database manager instance
-db_manager = DatabaseManager() 
+db_manager = DatabaseManager("carriers.db") 
