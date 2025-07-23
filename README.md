@@ -5,7 +5,7 @@ This is a Flask-based API and dashboard for managing and booking carrier loads, 
 ## 🌐 Live Web App
 
 **Dashboard & API:**  
-https://happy-robot-challenge-jweajqeqa-brunos-projects-7e1456d0.vercel.app
+https://happy-robot-challenge-qfx2mwzs5-brunos-projects-7e1456d0.vercel.app
 
 - `/dashboard` — Modern dashboard UI for viewing and booking loads
 - `/carriers/api/carriers` — API endpoint for all carriers (requires API key)
@@ -16,7 +16,7 @@ All the endpoints are protected via an API Key.
 
 To acess the dashboard:
 ```
-https://happy-robot-challenge-jweajqeqa-brunos-projects-7e1456d0.vercel.app/dashboard?api_key={key}
+https://happy-robot-challenge-qfx2mwzs5-brunos-projects-7e1456d0.vercel.app/dashboard?api_key={key}
 ```
 
 ## Local Development
